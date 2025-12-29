@@ -4,27 +4,32 @@ from datetime import datetime
 from streamlit_gsheets import GSheetsConnection
 
 # ==========================================
-# 1. KONFIGURASI UTAMA
+# 1. KONFIGURASI & KONEKSI
 # ==========================================
+st.set_page_config(page_title="Ninja Guild 2025 DB", page_icon="🥷", layout="wide")
+
+# Masukkan ID Spreadsheet Anda
 SPREADSHEET_ID = "1vOPqLuwRxvj4Of-t7owwmGvdGE06UjTl9Kve01vpZv0"
-# URL yang benar untuk penulisan data via gsheets connection
+# URL Lengkap dengan Protokol HTTPS
 SPREADSHEET_URL = f"docs.google.com{SPREADSHEET_ID}/edit#gid=0"
 ADMIN_PASSWORD = "ninja_rahasia"
 
-st.set_page_config(page_title="Ninja Guild 2025 DB", page_icon="🥷", layout="wide")
-
-# ==========================================
-# 2. FUNGSI KONEKSI & BACA DATA
-# ==========================================
-# Inisialisasi koneksi menggunakan secrets di .streamlit/secrets.toml
+# Inisialisasi koneksi (Membaca dari .streamlit/secrets.toml)
 conn = st.connection("gsheets", type=GSheetsConnection)
 
+# ==========================================
+# 2. FUNGSI BACA DATA
+# ==========================================
 @st.cache_data(ttl=60)
 def load_data():
     try:
-        # Membaca data menggunakan koneksi gsheets (lebih stabil untuk private/auth)
-        # Jika sheet name bukan 'Sheet1', ganti di bawah ini
-        data = conn.read(worksheet="Sheet1", ttl="1m")
+        # Menyertakan spreadsheet=SPREADSHEET_URL mengatasi error "Spreadsheet must be specified"
+        data = conn.read(
+            spreadsheet=SPREADSHEET_URL, 
+            worksheet="Sheet1", 
+            ttl="1m"
+        )
+        # Bersihkan data: Hapus baris kosong di kolom 'Nama', isi sel kosong dengan 0
         df_clean = data.dropna(subset=['Nama']).fillna(0)
         return df_clean
     except Exception as e:
@@ -38,10 +43,14 @@ df = load_data()
 # ==========================================
 def write_to_gsheets(updated_df):
     try:
-        # Update balik ke Google Sheets
-        conn.update(worksheet="Sheet1", data=updated_df)
-        st.success("✅ Database di Google Sheets berhasil diperbarui!")
-        st.cache_data.clear() # Hapus cache agar data terbaru langsung muncul
+        # Update ke Google Sheets
+        conn.update(
+            spreadsheet=SPREADSHEET_URL,
+            worksheet="Sheet1",
+            data=updated_df
+        )
+        st.success("✅ Database Google Sheets Berhasil Diperbarui!")
+        st.cache_data.clear() # Reset cache agar data baru langsung muncul
         st.rerun()
     except Exception as e:
         st.error(f"Gagal menyimpan ke Google Sheets: {e}")
@@ -50,7 +59,7 @@ def write_to_gsheets(updated_df):
 # 4. ANTARMUKA (UI)
 # ==========================================
 st.title("🏯 Markas Besar Ninja Guild")
-st.info(f"Update Terakhir: {datetime.now().strftime('%d %B %Y %H:%M')}")
+st.markdown(f"📅 **Update Terakhir:** {datetime.now().strftime('%d %B %Y %H:%M')}")
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📜 Struktur", "👥 Roster", "🌋 Advent", "🏰 Castle Rush", "⚙️ Admin Panel"
@@ -86,7 +95,7 @@ with tab5:
             target = st.selectbox("Pilih Ninja", df['Nama'].tolist())
             mode = st.radio("Kategori Update", ["Advent", "Castle Rush"])
             
-            # Mendapatkan index dari baris yang dipilih
+            # Cari index dari ninja yang dipilih
             idx = df[df['Nama'] == target].index[0]
 
             if mode == "Advent":
@@ -113,8 +122,10 @@ with tab5:
                 
                 if st.button(f"💾 Simpan Skor {hari}"):
                     df.at[idx, hari] = skor_hari
-                    # Hitung total CR secara otomatis
-                    df.at[idx, 'Total_CR'] = sum(df.loc[idx, hari_list])
+                    # Hitung ulang total CR baris tersebut
+                    df.at[idx, 'Total_CR'] = sum([df.at[idx, h] for h in hari_list])
                     write_to_gsheets(df)
+        else:
+            st.warning("Data tidak tersedia.")
     elif pwd != "":
-        st.error("Password salah!")
+        st.error("Password Salah!")
