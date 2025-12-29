@@ -5,6 +5,11 @@ import sys
 from datetime import datetime
 from streamlit_gsheets import GSheetsConnection
 
+conn = GSheetsConnection()
+df = conn.read(spreadsheet="1vOPqLuwRxvj4Of-t7owwmGvdGE06UjTl9Kve01vpZv0",
+               worksheet="DataMember")
+print(df.head())
+
 # ======================================================
 # LOGGING SETUP (PALING AWAL)
 # ======================================================
