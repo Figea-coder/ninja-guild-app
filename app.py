@@ -20,6 +20,8 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 @st.cache_data(ttl=60) # Cache singkat agar update cepat terlihat
 def load_data():
     try:
+        # --- BARIS DEBUGGING BARU ---
+        st.info(f"Mencoba membaca dari URL: {SPREADSHEET_URL}")
         # Membaca data dan membersihkan baris kosong
         df_raw = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="Sheet1")
         df_clean = df_raw.dropna(subset=['Nama']) # Hapus baris yang Namanya kosong
