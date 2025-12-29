@@ -2,38 +2,49 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 from streamlit_gsheets import GSheetsConnection
+import gspread # Library tambahan untuk koneksi yang lebih kuat
 
 # ==========================================
 # 1. KONFIGURASI UTAMA
 # ==========================================
-# URL HARUS LENGKAP DENGAN https://
-SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1vOPqLuwRxvj4Of-t7owwmGvdGE06UjTl9Kve01vpZv0/edit"
+SPREADSHEET_ID_RAW = "1vOPqLuwRxvj4Of-t7owwmGvdGE06UjTl9Kve01vpZv0"
+SPREADSHEET_URL_EDIT = f"docs.google.com{SPREADSHEET_ID_RAW}/edit"
 ADMIN_PASSWORD = "ninja_rahasia"
 
 st.set_page_config(page_title="Ninja Guild 2025 DB", page_icon="🥷", layout="wide")
 
 # ==========================================
-# 2. KONEKSI & LOAD DATA
+# 2. FUNGSI BACA DATA (Baca via Link Publik)
 # ==========================================
-conn = st.connection("gsheets", type=GSheetsConnection)
-
 @st.cache_data(ttl=60) # Cache singkat agar update cepat terlihat
 def load_data():
     try:
-        # --- BARIS DEBUGGING BARU ---
-        st.info(f"Mencoba membaca dari URL: {SPREADSHEET_URL}")
-        # Membaca data dan membersihkan baris kosong
-        df_raw = conn.read(spreadsheet=SPREADSHEET_URL, worksheet="Sheet1")
-        df_clean = df_raw.dropna(subset=['Nama']) # Hapus baris yang Namanya kosong
-        return df_clean.fillna(0)
+        # Menggunakan link CSV download publik untuk MEMBACA data (solusi Error 400/404)
+        csv_url = f"docs.google.com{SPREADSHEET_ID_RAW}/export?format=csv&gid=0"
+        df_clean = pd.read_csv(csv_url).dropna(subset=['Nama']).fillna(0)
+        return df_clean
     except Exception as e:
-        st.error(f"Gagal memuat data: {e}")
+        st.error(f"Gagal memuat data: {e}. Pastikan Google Sheets di-Share ke 'Anyone with the link'.")
         return pd.DataFrame()
 
 df = load_data()
 
 # ==========================================
-# 3. ANTARMUKA (UI)
+# 3. FUNGSI MENULIS DATA (Via Otentikasi Service Account)
+# ==========================================
+def write_to_gsheets(dataframe):
+    try:
+        # Menggunakan koneksi st-gsheets-connection untuk MENULIS (butuh Secrets TOML)
+        conn = st.connection("gsheets", type=GSheetsConnection)
+        conn.update(spreadsheet=SPREADSHEET_URL_EDIT, data=dataframe, worksheet="Sheet1")
+        st.success("Database diperbarui secara permanen!")
+        st.cache_data.clear()
+        st.rerun()
+    except Exception as e:
+        st.error(f"Gagal menyimpan ke Google Sheets: {e}")
+
+# ==========================================
+# 4. ANTARMUKA (UI) & LOGIC
 # ==========================================
 st.title("🏯 Markas Besar Ninja Guild")
 st.markdown(f"**Update Terakhir:** {datetime.now().strftime('%d %B %Y %H:%M')}")
@@ -72,8 +83,7 @@ with tab5:
             target = st.selectbox("Pilih Ninja", df['Nama'].tolist())
             mode = st.radio("Kategori Update", ["Advent", "Castle Rush"])
             
-            # Mengambil index (kita tahu ini cuma 1 baris)
-            idx_pos = df[df['Nama'] == target].index[0]
+            idx_pos = df[df['Nama'] == target].index
 
             if mode == "Advent":
                 col1, col2, col3, col4 = st.columns(4)
@@ -90,9 +100,7 @@ with tab5:
                     df.at[idx_pos, 'Karma'] = t_karma
                     df.at[idx_pos, 'Tiket_Terpakai'] = tiket
                     df.at[idx_pos, 'Total_Advent'] = t_teo + t_kyle + t_yeon + t_karma
-                    
-                    conn.update(spreadsheet=SPREADSHEET_URL, data=df, worksheet="Sheet1")
-                    st.success("Database diperbarui!"); st.cache_data.clear(); st.rerun()
+                    write_to_gsheets(df) # Panggil fungsi tulis
 
             elif mode == "Castle Rush":
                 hari = st.selectbox("Pilih Hari", ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"])
@@ -100,12 +108,10 @@ with tab5:
                 
                 if st.button(f"💾 Simpan Skor {hari}"):
                     df.at[idx_pos, hari] = skor_hari
-                    # Hitung otomatis Total CR dari semua kolom hari
-                    df.at[idx_pos, 'Total_CR'] = df.loc[idx_pos, ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']].sum()
-                    
-                    conn.update(spreadsheet=SPREADSHEET_URL, data=df, worksheet="Sheet1")
-                    st.success(f"Skor {hari} tersimpan!"); st.cache_data.clear(); st.rerun()
+                    df.at[idx_pos, 'Total_CR'] = df.loc[idx_pos, ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']].sum(axis=1)
+                    write_to_gsheets(df) # Panggil fungsi tulis
         else:
             st.error("Kolom 'Nama' tidak ditemukan atau data kosong.")
     elif pwd != "":
-        st.info("Masukkan password admin.")
+        st.info("Silakan login.")
+
