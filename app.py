@@ -5,9 +5,13 @@ import sys
 from datetime import datetime
 from streamlit_gsheets import GSheetsConnection
 
-conn = GSheetsConnection()
-df = conn.read(spreadsheet="1vOPqLuwRxvj4Of-t7owwmGvdGE06UjTl9Kve01vpZv0",
-               worksheet="DataMember")
+conn = GSheetsConnection(connection_name="ninja_guild_conn")
+# Membaca sheet
+df = conn.read(
+    spreadsheet="1vOPqLuwRxvj4Of-t7owwmGvdGE06UjTl9Kve01vpZv0",
+    worksheet="DataMember"
+)
+
 print(df.head())
 
 # ======================================================
