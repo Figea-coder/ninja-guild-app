@@ -50,6 +50,7 @@ def load_data():
             
         # Pembersihan data
         df_clean = data.dropna(subset=['Nama']).fillna(0)
+        st.sidebar.write("Debug Columns:", df_clean.columns.tolist())
         
         logger.info(f"Berhasil memuat {len(df_clean)} baris data.")
         return df_clean
