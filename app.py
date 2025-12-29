@@ -9,7 +9,7 @@ from streamlit_gsheets import GSheetsConnection
 # ==========================================
 st.set_page_config(page_title="Ninja Guild 2025 DB", page_icon="🥷", layout="wide")
 
-SHEET_URL = "docs.google.com"
+SHEET_URL = "1vOPqLuwRxvj4Of-t7owwmGvdGE06UjTl9Kve01vpZv0"
 ADMIN_PASSWORD = "ninja_rahasia"
 DAYS_OF_WEEK = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
 ADVENT_HEROES = ["Teo", "Kyle", "Yeonhee", "Karma"]
@@ -29,7 +29,7 @@ class DatabaseManager:
     def load_data(_self):
         """Memuat data dari Google Sheets dengan pembersihan dasar."""
         try:
-            df = _self.conn.read(spreadsheet=SHEET_URL, worksheet="Sheet1")
+            df = _self.conn.read(spreadsheet=SHEET_URL, worksheet="DataMember")
             if df.empty:
                 return pd.DataFrame()
             
@@ -50,7 +50,7 @@ class DatabaseManager:
     def update_data(self, updated_df):
         """Menulis data kembali ke Google Sheets."""
         try:
-            self.conn.update(spreadsheet=SHEET_URL, worksheet="Sheet1", data=updated_df)
+            self.conn.update(spreadsheet=SHEET_URL, worksheet="DataMember", data=updated_df)
             st.cache_data.clear()
             st.success("✅ Database Berhasil Diperbarui!")
             st.rerun()
