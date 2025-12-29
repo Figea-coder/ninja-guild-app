@@ -7,7 +7,7 @@ from streamlit_gsheets import GSheetsConnection
 # 1. KONFIGURASI UTAMA
 # ==========================================
 # URL HARUS LENGKAP DENGAN https://
-SPREADSHEET_URL = "docs.google.com"
+SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1vOPqLuwRxvj4Of-t7owwmGvdGE06UjTl9Kve01vpZv0/edit"
 ADMIN_PASSWORD = "ninja_rahasia"
 
 st.set_page_config(page_title="Ninja Guild 2025 DB", page_icon="🥷", layout="wide")
